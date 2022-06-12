@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Sudoku Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    
+    <header>
+        <h1> Sudoku </h1>
+        <div id="setup-game">
+            <div id="level">
+                <h3>Choose Difficulty: </h3>
+                
+                <label><input id="diff-1" type="radio" value="easy" name="diff" checked> Easy</label>
+                <label><input id="diff-2" type="radio" value="medium" name="diff"> Medium</label>
+                <label><input id="diff-3" type="radio" value="hard" name="diff"> Hard</label>
+            </div>
+            <div id="time">
+                <h3>Choose Time: </h3>
+                <label><input id="time-1" type="radio" value="three" name="time"> 3 Min</label>
+                <label><input id="time-2" type="radio" value="five" name="time" checked> 5 Min</label>
+                <label><input id="time-3" type="radio" value="ten" name="time"> 10 Min</label>
+            </div>
+            <div id="theme">
+                <h3>Select Theme: </h3>
+                <label><input id="theme-1" type="radio" value="light" name="theme" checked> Light</label>
+                <label><input id="theme-2" type="radio" value="dark" name="theme"> Dark</label>
+            </div>
+        </div>
+        <button id="start-btn">Create New Game</button>
+    </header>
+
+    <!-- <section> -->
+
+        <div id="start">
+            <p id="timer"></p>
+            <p id="lives"></p>
+        </div>
+
+        <div id="game">
+            <div id="board"></div>
+            <div id="number-container" class="hidden">
+                <p id="one">1</p>
+                <p id="two">2</p>
+                <p id="three">3</p>
+                <p id="four">4</p>
+                <p id="five">5</p>
+                <p id="six">6</p>
+                <p id="seven">7</p>
+                <p id="eight">8</p>
+                <p id="nine">9</p>
+            </div>
+        </div>
+
+    <!-- </section> -->
+
+    <footer>
+        @Copyright Satyam 2023
+    </footer>
+    
+    <script src="index.js"></script>
+</body>
+</html>
