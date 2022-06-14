@@ -1,17 +1,3 @@
-// Load boards from the file or manually
-const easy = [
-    "6------7------5-2------1---362----81--96-----71--9-4-5-2---651---78----345-------", 
-    "685329174971485326234761859362574981549618732718293465823946517197852643456137298"
-  ];
-const medium = [
-"--9-------4----6-758-31----15--4-36-------4-8----9-------75----3-------1--2--3--",
-"619472583243985617587316924158247369926531478734698152891754236365829741472163895"
-];
-const hard = [
-"-1-5-------97-42----5----7-5---3---7-6--2-41---8--5---1-4------2-3-----9-7----8--",
-"712583694639714258845269173521436987367928415498175326184697532253841769976352841"
-];
-
 // Create variables
 var timer;
 var timeRemaining;
@@ -19,25 +5,22 @@ var lives;
 var selectedNum;
 var selectedTile;
 var disableSelect;
-
-
-//----------------Helper Functions----------------
-const id= (id) => document.getElementById(id);
-
-const qs= (selector) => document.querySelector(selector);
-
-const qsa = (selector) => document.querySelectorAll(selector);
-//----------------------------------------------------
-
+var solution;
+var boardP;
 
 window.onload = function (){
     // Run startgame function when button is clicked
     id("start-btn").addEventListener("click",startGame);
+
+    // Show Solution
+    id('solve').addEventListener('click',showSolution);
+
     disableSelect=false;
     // Add event listner to each number in number conatiner
-    for(let i=0;i<id('number-container')?.children.length;i++)
+    for(let i=1;i<id('number-container')?.children.length;i++)
     {
-        id('number-container').children[i].addEventListener('click',function(){
+        id('number-container').children[i].addEventListener('click',function()
+        {
             // If selecting is not disabled
             if(!disableSelect){
                 // If number is already selected
@@ -48,8 +31,7 @@ window.onload = function (){
                 }
                 else{
                     // Deselect all other numbers
-                    for(let j=0;j<9;j++){
-                        console.log(i);
+                    for(let j=1;j<10;j++){
                         id('number-container').children[j].classList.remove('selected');
                     }
                     // Select it and update selectedNum Variable
@@ -57,20 +39,28 @@ window.onload = function (){
                     selectedNum=this;
                     updateMove();
                 }
-            }
-
+            } 
         });
     }
 }
 
 
-function startGame(){
-    // Chose board difficulty
-    let board;
+async function  startGame() {
 
-    if(id("diff-1").checked)board=easy[0];
-    else if(id("diff-2").checked)board=medium[0];
-    else board=hard[0];
+    var url="https://sugoku.herokuapp.com/board?difficulty=";
+
+    // Chose board difficulty
+
+    if(id("diff-1").checked)url+="easy";
+    else if(id("diff-2").checked)url+="medium";
+    else url+="hard";
+
+    // Time for xhrRequest https://github.com/bertoort/sugoku
+    let response = await makeRequest('get',url);
+    
+    boardP = JSON.parse(response).board;
+
+    console.log(boardP);
 
     // Set Lives to 3 and enable selecting number and tiles
     lives=3;
@@ -79,7 +69,12 @@ function startGame(){
     id("lives").textContent="Lives Remaining: 3";
 
     // Time to Generate board based on difficulty
-    generateBoard(board);
+    generateBoard(boardP);
+
+    solution= JSON.parse(response).board;
+    solveSudokuHelper(solution,0,0);
+
+    console.log(solution);
 
     // Starts the timer
     startTimer();
@@ -94,38 +89,182 @@ function startGame(){
 
     // Show number container
     id('number-container').classList.remove('hidden');
+    id('solve').classList.remove('hidden');
+}
+// --------------------Request----------------------------
 
+function makeRequest(method, url) {
+    return new Promise(function (resolve, reject) {
+        let xhr = new XMLHttpRequest();
+        xhr.open(method, url);
+        xhr.onload = function () {
+            if (this.status >= 200 && this.status < 300) {
+                resolve(xhr.response);
+            } else {
+                reject({
+                    status: this.status,
+                    statusText: xhr.statusText
+                });
+            }
+        };
+        xhr.onerror = function () {
+            reject({
+                status: this.status,
+                statusText: xhr.statusText
+            });
+        };
+        xhr.send();
+    });
 }
 
-function startTimer(){
-    // Sets Time remaining based on input
-    if(id('time-1').checked)timeRemaining=180;
-    else if(id('time-2').checked)timeRemaining=300;
-    else timeRemaining = 600;
+//--------------------showSolution----------------------
 
-    // Sets timer for first second
-    id('timer').textContent = timeConversion(timeRemaining);
+function showSolution(){
+    lives=0;    
+    let tiles = qsa('.tile');
     
-    // Sets timer to update every second
-    timer = setInterval(function (){
-        timeRemaining--;
-        // If no time remaininf end the game
-        if(timeRemaining==0)endGame();
-        id('timer').textContent = timeConversion(timeRemaining);
-    },1000);
+    console.log(boardP);
+
+    // Fill each tile by sulurion now
+    for(let i=0;i<tiles.length;i++)
+    if(boardP[parseInt(i/9)][i%9]==0)
+    {
+        tiles[i].textContent = solution[parseInt(i/9)][i%9];
+        tiles[i].style.color = "blue";
+    }
+    endGame();
 }
 
-//-----------Convers seconds into string MM:SS format
-function timeConversion(time){
-    let minutes = Math.floor(time/60);
-    if(minutes<10)minutes='0'+minutes;
-    let sec = time%60;
-    if(sec<10)sec='0'+sec;
-    return (minutes+':'+sec);
+//---------------------Backtracking-----------------------
+
+function isSafe(solution,r,c,num){
+
+    //not repeating in the same row or column 
+    for(var i=0;i<9;i++){
+        if(solution[i][c]==num || solution[r][i]==num){
+            return false;
+        }
+    }
+    //subgrid
+    var sx = r - r%3;
+    var sy = c - c%3;
+
+    for(var x=sx;x<sx+3;x++){
+        for(var y=sy;y<sy+3;y++){
+            if(solution[x][y]==num){
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
+function solveSudokuHelper(solution,r,c){
+    //base case 
+    if(r==9){
+        return true;
+    }
+    //other cases 
+    if(c==9){
+        return solveSudokuHelper(solution,r+1,0);
+    }
+
+    //pre-filled cell, skip it
+    if(solution[r][c]!=0){
+        return solveSudokuHelper(solution,r,c+1);
+    }
+
+    //there is 0 in the current location
+    for(var i=1;i<=9;i++){
+
+        if(isSafe(solution,r,c,i)){
+            solution[r][c] = i;
+            var success = solveSudokuHelper(solution,r,c+1);
+            if(success==true){
+                return true;
+            }
+            //backtracking step
+            solution[r][c] = 0;
+        }
+    }
+    return false;
+}
 
 //----------------------------Board-----------------------------
+
+function generateBoard(boardP){
+    // Cleasr our previous board if present
+    clearPrevious();
+    // Let used to increment tile ids
+    let idCount=0;
+
+    for(let i=0;i<81;i++){
+        // Create a new Paragraph element 
+        let tile = document.createElement('div');
+        // IF the tile is not supposed to be blank
+        if(boardP[parseInt(i/9)][i%9]!='0')
+        {
+            // Set tile to correct number
+            tile.textContent=boardP[parseInt(i/9)][i%9];
+        }
+        else
+        {
+            // We will add click eventListner to tile
+            tile.addEventListener('click',function(){
+                // If selecting is not disabled
+                if(!disableSelect)
+                {
+                    // If the tile is already selected
+                    if(tile.classList.contains('selected')){
+                        // Then remove selection
+                        tile.classList.remove('selected');
+                        selectedTile=null;
+                    }
+                    else{
+                        // Then we deselect all other tiles
+                        for(let j=0;j<81;j++){
+                            qsa('.tile')[j].classList.remove('selected');
+                        }
+                        // Add selection and update variable
+                        tile.classList.add('selected');
+                        selectedTile=tile;
+                        updateMove();
+                    }
+                }
+            });
+        }
+
+        // Assign tile id
+        tile.id = idCount;
+
+    //----Adding Border Class---
+        if(idCount%3==0)
+        tile.classList.add('lsb'); // Left Side Border
+        else
+        tile.classList.add('ldb'); // Left Dot border
+        
+        if(idCount<=8)
+        tile.classList.add('tsb');  // Top side Border
+        
+        if(idCount%9==8)
+        tile.classList.add('rsb'); // Right side Border
+
+        if((idCount>=18 && idCount<=26) || (idCount>=45 && idCount<=53) || idCount>=72)
+        tile.classList.add('bsb');  // Bottom Side Border
+        
+        if((idCount>=9 && idCount<=26) || (idCount>=36 && idCount<=53) || idCount>=63)
+        tile.classList.add('tdb');  // Top down border
+    //------------------------------
+
+        // Add classes to all tiles
+        tile.classList.add('tile');
+        // Add tile to board
+        id('board').appendChild(tile);
+        idCount++;
+    }
+}
+
 
 function updateMove(){
     // If a tile and a number is selected
@@ -133,9 +272,13 @@ function updateMove(){
     {
         // Set the tile to the correct number
         selectedTile.textContent = selectedNum.textContent;
-        
+ 
     // If the number matches the corresponding number in the solution key
         if(checkCorrect(selectedTile)){
+            
+            let index=selectedTile.id;
+            boardP[parseInt(index/9)][index%9]=selectedTile.textContent;
+
             // Deselects the tiles
             selectedTile.classList.remove('selected');
             selectedNum.classList.remove('selected');
@@ -206,14 +349,9 @@ function checkDone(){
 }
 
 function checkCorrect(tile){
-    // Set solution on difficulty selection
-    let solution;
-    if(id("diff-1").checked)solution=easy[1];
-    else if(id("diff-2").checked)solution=medium[1];
-    else solution=hard[1];
-    
     // If tile's number is equal to solution's number
-    if(solution.charAt(tile.id) === tile.textContent)return true;
+    if(solution[parseInt((tile.id)/9)][(tile.id)%9] == tile.textContent)
+    return true;
     else return false;
 }   
 
@@ -237,61 +375,4 @@ function clearPrevious(){
     // Clear selected variables
     selectedTile = null;
     selectedNum = null;
-}
-
-function generateBoard(board){
-    // Cleasr our previous board if present
-    clearPrevious();
-    // Let used to increment tile ids
-    let idCount=0;
-    for(let i=0;i<81;i++){
-        // Create a new Paragraph element 
-        let tile = document.createElement('p');
-        // IF the tile is not supposed to be blank
-        if(board.charAt(i)!='-'){
-            // Set tile to correct number
-            tile.textContent = board.charAt(i);
-        }
-        else{
-            // We will add click eventListner to tile
-            tile.addEventListener('click',function(){
-                // If selecting is not disabled
-                if(!disableSelect){
-                    // If the tile is already selected
-                    if(tile.classList.contains('selected')){
-                        // Then remove selection
-                        tile.classList.remove('selected');
-                        selectedTile=null;
-                    }
-                    else{
-                        // Then we deselect all other tiles
-                        for(let j=0;j<81;j++){
-                            qsa('.tile')[j].classList.remove('selected');
-                        }
-                        // Add selection and update variable
-                        tile.classList.add('selected');
-                        selectedTile=tile;
-                        updateMove();
-                    }
-                }
-            });
-        }
-        // Assign tile id
-        tile.id = idCount;
-        // Increment id for the next tile
-        idCount++;
-
-        // Add classes to all tiles
-        tile.classList.add('tile');
-
-        if((tile.id>=18 && tile.id<27) || (tile.id>44 && tile.id<54)){
-            tile.classList.add('bottomBorder');
-        }
-        if(tile.id%9==2 || tile.id%9==5){
-            tile.classList.add('rightBorder');
-        }
-
-        // Add tile to board
-        id('board').appendChild(tile);
-    }
 }
